@@ -1,0 +1,92 @@
+C51 COMPILER V9.59.0.0   PROJECT4                                                          04/25/2019 16:44:20 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE PROJECT4
+OBJECT MODULE PLACED IN .\Objects\project4.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE project4.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\
+                    -project4.lst) TABS(2) OBJECT(.\Objects\project4.obj)
+
+line level    source
+
+   1           #include <reg51.h>
+   2           
+   3           void generate38K();
+   4           
+   5           sbit IRsig = P3^7;
+   6           sbit inraredOutput = P3^3;
+   7           sbit Led = P2^0;
+   8          
+   9          /*timerInterrupt 0*/  
+  10          void GenInfraRed(void) interrupt 1{ 
+  11   1        /*flag to do on 600us and off 20ms*/
+  12   1        static unsigned flag = 0 ;
+  13   1        /*off for 20ms*/
+  14   1        if(flag == 0){
+  15   2          IRsig = 1;
+  16   2          TF0 = 0;
+  17   2          TL0 = 0x00;
+  18   2          TH0 = 0x70;
+  19   2           
+  20   2          TF1 = 0;
+  21   2        /*set flag for on 600us*/      
+  22   2          flag = 1;
+  23   2      }  
+  24   1        /*0n for 600 us*/
+  25   1         else{
+  26   2          IRsig = 0;
+  27   2          TL0=0xAE;
+  28   2          TH0=0xFB;
+  29   2          flag = 0; 
+  30   2         }
+  31   1       }
+  32          
+  33           /* timerInterrupt 1 */
+  34          void generate38K(void) interrupt 3{ 
+  35   1         
+  36   1         IRsig =~ IRsig;
+  37   1         TF1 = 0;  
+  38   1         TR1 = 1;
+  39   1        }
+  40          /*externalInterrupt 1*/ 
+  41          void obstacleDetected(void) interrupt 2{ 
+  42   1          
+  43   1          Led = inraredOutput;
+  44   1      }
+  45            
+  46            
+  47           int main(){
+  48   1         /*intializiton*/
+  49   1         IRsig = 0;
+  50   1         Led = 0;
+  51   1         
+  52   1         IE = 0x8F;
+  53   1         TMOD=0x19;
+  54   1         
+C51 COMPILER V9.59.0.0   PROJECT4                                                          04/25/2019 16:44:20 PAGE 2   
+
+  55   1         /*timerInterrupt 0 for 600 micro sec*/
+  56   1         TL0=0xAE;
+  57   1         TH0=0xFB;
+  58   1         TR0 = 1; /* anded with P3.2 value of button*/
+  59   1         
+  60   1         /*timerInterrupt 1 for 38KHZ*/
+  61   1         TL1=0xE8;
+  62   1         TH1=0xFF;
+  63   1         TR1 = 1;
+  64   1         
+  65   1         while(1);
+  66   1       }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     87    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      2    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
