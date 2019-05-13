@@ -1,4 +1,4 @@
-C51 COMPILER V9.59.0.0   PROJECT4                                                          04/25/2019 16:44:20 PAGE 1   
+C51 COMPILER V9.59.0.0   PROJECT4                                                          05/03/2019 18:55:36 PAGE 1   
 
 
 C51 COMPILER V9.59.0.0, COMPILATION OF MODULE PROJECT4
@@ -8,82 +8,88 @@ COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE project4.c OPTIMIZE(8,SPEED) BRO
 
 line level    source
 
-   1           #include <reg51.h>
+   1          #include <reg51.h>
    2           
-   3           void generate38K();
-   4           
-   5           sbit IRsig = P3^7;
-   6           sbit inraredOutput = P3^3;
-   7           sbit Led = P2^0;
-   8          
-   9          /*timerInterrupt 0*/  
-  10          void GenInfraRed(void) interrupt 1{ 
-  11   1        /*flag to do on 600us and off 20ms*/
-  12   1        static unsigned flag = 0 ;
-  13   1        /*off for 20ms*/
-  14   1        if(flag == 0){
-  15   2          IRsig = 1;
-  16   2          TF0 = 0;
-  17   2          TL0 = 0x00;
-  18   2          TH0 = 0x70;
-  19   2           
-  20   2          TF1 = 0;
-  21   2        /*set flag for on 600us*/      
-  22   2          flag = 1;
-  23   2      }  
-  24   1        /*0n for 600 us*/
-  25   1         else{
-  26   2          IRsig = 0;
-  27   2          TL0=0xAE;
-  28   2          TH0=0xFB;
-  29   2          flag = 0; 
-  30   2         }
-  31   1       }
-  32          
-  33           /* timerInterrupt 1 */
-  34          void generate38K(void) interrupt 3{ 
-  35   1         
-  36   1         IRsig =~ IRsig;
-  37   1         TF1 = 0;  
-  38   1         TR1 = 1;
-  39   1        }
-  40          /*externalInterrupt 1*/ 
-  41          void obstacleDetected(void) interrupt 2{ 
-  42   1          
-  43   1          Led = inraredOutput;
-  44   1      }
-  45            
-  46            
-  47           int main(){
-  48   1         /*intializiton*/
-  49   1         IRsig = 0;
-  50   1         Led = 0;
-  51   1         
-  52   1         IE = 0x8F;
-  53   1         TMOD=0x19;
-  54   1         
-C51 COMPILER V9.59.0.0   PROJECT4                                                          04/25/2019 16:44:20 PAGE 2   
+   3           
+   4           sbit infraredSignal = P3^7;
+   5           sbit infraredOutputSignal = P3^3;
+   6           sbit Led = P2^0;
+   7           sbit SW = P3^2;
+   8           
+   9           unsigned char overflow = 0;
+  10           
+  11           /* Timer 0 Interrupt (to load Timer 1 with 38KHZ )*/
+  12           void generateSignal_Timer0(void) interrupt 1{// timerInterrupt 0
+  13   1         /*load Timer 1 with 38KHZ */
+  14   1         TL1=0xFA;
+  15   1         TH1=0xFF;
+  16   1         infraredSignal =1;
+  17   1         overflow++;
+  18   1         /*Start Timer 1 and Intrrupt Timer 1*/
+  19   1         TR1 = 1;
+  20   1       }
+  21           /* Timer 1 Interrupt (For generte 38KHZ signl in on mode 600us and off for 20ms)*/
+  22           void generateSignal38KHZ_Timer1(void) interrupt 3{// timerInterrupt 1
+  23   1         /* Enter the off mode  */
+  24   1          if(overflow==50){
+  25   2          TF1=0;
+  26   2          TL0 = 0x00;
+  27   2          TH0 = 0x70;
+  28   2          infraredSignal=0;
+  29   2          TR0=1;
+  30   2          overflow=0;
+  31   2          }
+  32   1          /*Enter the on mode*/
+  33   1          else{   
+  34   2          overflow++; 
+  35   2          TF1 = 0; 
+  36   2          infraredSignal =~ infraredSignal;     
+  37   2          TL1=0xFA;
+  38   2          TH1=0xFF;
+  39   2          TR1 = 1;
+  40   2          }}
+  41           
+  42          /* external Interrupt 0(For Push button)*/
+  43            void pushButton(void) interrupt 0{
+  44   1          TL0 = 0x00;
+  45   1          TH0 = 0x70;
+  46   1          /*for Call Timer Interrupt 0  */
+  47   1          TR0 = 1;
+  48   1          infraredSignal=0; 
+  49   1        }
+  50            /*Intialize the input and output prephral*/
+  51            void Intialize(){
+  52   1         Led = 0;
+  53   1         SW= 1; 
+  54   1         infraredOutputSignal = 1;
+C51 COMPILER V9.59.0.0   PROJECT4                                                          05/03/2019 18:55:36 PAGE 2   
 
-  55   1         /*timerInterrupt 0 for 600 micro sec*/
-  56   1         TL0=0xAE;
-  57   1         TH0=0xFB;
-  58   1         TR0 = 1; /* anded with P3.2 value of button*/
-  59   1         
-  60   1         /*timerInterrupt 1 for 38KHZ*/
-  61   1         TL1=0xE8;
-  62   1         TH1=0xFF;
-  63   1         TR1 = 1;
-  64   1         
-  65   1         while(1);
-  66   1       }
+  55   1         infraredSignal = 0;
+  56   1        }
+  57           int main(){
+  58   1         /*Enable the interrupt set EA,EX0,EX1,ET1,ET0*/
+  59   1         IE = 0x8F;
+  60   1         /*Enable timer 0 in mode 1 and timer 1 in mode 1*/
+  61   1         TMOD=0x19;
+  62   1         
+  63   1         Intialize();
+  64   1         /*Enable Timer 0*/
+  65   1         TR0=1;
+  66   1         
+  67   1         while(1){
+  68   2          /*Set Led if return ouput = 1 and clear Led if return output = 0 */ 
+  69   2         Led = infraredOutputSignal;
+  70   2         }
+  71   1         
+  72   1       }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =     87    ----
+   CODE SIZE        =     90    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =      2    ----
+   DATA SIZE        =      1    ----
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
 END OF MODULE INFORMATION.
